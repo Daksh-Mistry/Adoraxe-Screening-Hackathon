@@ -9,8 +9,8 @@ from urllib.parse import urljoin
 load_dotenv()
 
 # read tokens from .env
-cf_clearance = os.getenv("CF_CLEARANCE", "")
-asp_session = os.getenv("ASP_NET_SESSION_ID", "")
+cf_clearance = os.getenv("CF_CLEARANCE", "").strip()
+asp_session = os.getenv("ASP_NET_SESSION_ID", "").strip()
 
 # standard chrome user-agent
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
@@ -23,20 +23,24 @@ print(f"Searching dates from {from_date} to {to_date}")
 
 # setup session
 session = requests.Session()
+
+# build cookie string
+cookie_parts = []
 if cf_clearance:
-    session.cookies.set("cf_clearance", cf_clearance, domain=".searchiqs.com")
+    cookie_parts.append(f"cf_clearance={cf_clearance}")
 if asp_session:
-    session.cookies.set("ASP.NET_SessionId", asp_session, domain="www.searchiqs.com")
+    cookie_parts.append(f"ASP.NET_SessionId={asp_session}")
 
 session.headers.update({
     "User-Agent": user_agent,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://www.searchiqs.com/CTASH/",
+    "Cookie": "; ".join(cookie_parts)
 })
 
 # 1. open landing page
-r = session.get("https://www.searchiqs.com/CTASH/", impersonate="chrome")
+r = session.get("https://www.searchiqs.com/CTASH/", impersonate="chrome120")
 if "Just a moment..." in r.text:
     print("Warning: Cloudflare challenged request. Please update CF_CLEARANCE in .env")
 
@@ -70,6 +74,8 @@ search_data["ctl00$ContentPlaceHolder1$cboDocType"] = "(ALL)"
 search_data["ctl00$ContentPlaceHolder1$txtFromDate"] = from_date
 search_data["ctl00$ContentPlaceHolder1$txtThruDate"] = to_date
 search_data["ctl00$ContentPlaceHolder1$cmdSearch"] = "Search"
+search_data["ctl00$ContentPlaceHolder1$cmdSearch.x"] = "30"
+search_data["ctl00$ContentPlaceHolder1$cmdSearch.y"] = "15"
 
 r = session.post(search_url, data=search_data, impersonate="chrome120")
 results_url = "https://www.searchiqs.com/CTASH/SearchResultsMP.aspx"
